@@ -35,3 +35,12 @@
     - Name of trajectory file to write converged structures with energy and forces: `B_data_ef`
     - Name of trajectory file to write unconverged structures: `B_data_unconv`
     - INCAR settings: modify parameters to `Vasp(...)` function
+
+
+### Output
+
+- Each task in the job array will create its own directory after its array index.
+    Each of these directories will contain its own output trajectory files.
+- After the conclusion of all tasks in the array, task 0 will collect all trajectory files
+    into a single converged file and unconverged file in the root directory.
+- The job array directories and the log files can be kept or deleted.
