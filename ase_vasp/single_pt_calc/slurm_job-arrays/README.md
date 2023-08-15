@@ -30,11 +30,11 @@
 
             #SBATCH --partition=<partition>  # SLURM partition
 
-- `ase_vasp_run.py`
+- `ase_vasp_run.py` and `ase_vasp_cleanup.py`
 
     - Name of trajectory file to write converged structures with energy and forces: `B_data_ef`
     - Name of trajectory file to write unconverged structures: `B_data_unconv`
-    - INCAR settings: modify parameters to `Vasp(...)` function
+    - INCAR settings (`ase_vasp_run.py` only): modify parameters to `Vasp(...)` function
 
 
 ### Output
