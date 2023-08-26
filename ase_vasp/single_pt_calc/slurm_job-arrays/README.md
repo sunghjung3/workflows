@@ -11,8 +11,7 @@
             - NOTE: `..` points to this root directory for this variable
 
 - `run.sh`
-    - Location of the trajectory to calculate: `traj_path`
-        - Recommended to put the **absolute path**
+        
     - Number of calculations to run concurrently: edit the last integer in the line
         
             #SBATCH --array=0-19  # 20 concurrent calculations
@@ -30,11 +29,17 @@
 
             #SBATCH --partition=<partition>  # SLURM partition
 
-- `ase_vasp_run.py` and `ase_vasp_cleanup.py`
+    - Location of the trajectory to calculate: `traj_path`
+        - Recommended to put the **absolute path**
 
-    - Name of trajectory file to write converged structures with energy and forces: `B_data_ef`
-    - Name of trajectory file to write unconverged structures: `B_data_unconv`
-    - INCAR settings (`ase_vasp_run.py` only): modify parameters to `Vasp(...)` function
+    - File name prefix for output trajectory files: `out_traj_prefix`
+        - Trajectory of converged calculations: `<out_traj_prefix>_ef.traj`
+        - Trajectory of unconverged calculations: `<out_traj_prefix>_unconv.traj`
+
+
+- `ase_vasp_run.py`
+
+    - INCAR settings: modify parameters to `Vasp(...)` function
 
 
 ### Output
