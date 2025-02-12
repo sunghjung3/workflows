@@ -10,6 +10,10 @@ Taken from the [ASE example](https://wiki.fysik.dtu.dk/ase/tutorials/ga/ga_optim
 - If either `main_run.py` or a SLURM job is prematurely terminated, running `main_run.py` will resume exactly where it left off. No need to manually reset or adjust code.
 
 
+### TLDR
+
+Run `initialize_db.py` first, then `cd Mg-$i` and then run `nohup python ../main_run.py &`.
+
 ### Set up
 
 In this example, we attempt to find the globally optimal positions of placing a given number of Mg atoms inside an initial skeleton structure. Both the Mg atoms and the positions of the skeleton are adjustable.
@@ -27,9 +31,9 @@ The directories and file are set up the following way (relative to `$root_dir`):
     - `main_run.py`
         - Main script that should be run in the background of a cluster. Responsible for submiting jobs, making mutations, and waiting.
         - Run from `$root_dir/Mg/Mg-$i` as the working directory: `nohup python ../main_run.py &`
-        - Adjust the GA settings inside this script
+        - **Adjust** the GA settings inside this script
             - `initial_db_size` in this script should match `population_size` from the `initialize_db.py` script. Important for resuming termiated jobs.
-        - Also don't forget to modify the `jtg()` function to customize the ASE VASP job submission script (SBATCH lines, environmental variables, etc.)
+        - Also don't forget to **modify** the `jtg()` function to customize the ASE VASP job submission script (SBATCH lines, environmental variables, etc.)
             - See `ase_vasp/single_pt_calc/slurm_job-arrays` of this repo for examples on setting the ASE VASP environmental variables.
     - `slurmqueuerun.py`
         - Modified `ase.ga.pbs_queue_run.PBSQueueRun` to work with SLURM.
