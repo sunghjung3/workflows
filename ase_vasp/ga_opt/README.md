@@ -66,7 +66,10 @@ ASE VASP will read this and write a POSCAR with the 2 Fe groups merged together
 
 To prevent this, one of the Fe should be renamed to a different chemcial element in your initial skeleton POSCAR (something like Co, which has a similar atomic radius as Fe).
 
-Then, create your own POTPAW directory, and copy the Fe POTCAR into the Co directory. In this example:
+       Fe   Co   C    N    Mg
+    16    16   96    96    2
+
+Then, create your own POTPAW directory (i.e. `$root_dir/vasp_potpaws`), and copy the Fe POTCAR into the Co directory. In this example:
 
 - `$root_dir/vasp_potpaws/potpaw_PBE/C`
 - `$root_dir/vasp_potpaws/potpaw_PBE/Co`
@@ -77,4 +80,4 @@ Then, create your own POTPAW directory, and copy the Fe POTCAR into the Co direc
 
 At the end, the structures inside `all_candidates.traj` can be manually modified to change Co back to Fe.
 
-Make sure to set `VASP_PP_PATH` inside the `jtg()` function in `main_run.py` to `$root_dir/vasp_potpaws`.
+**Make sure to set `VASP_PP_PATH` inside the `jtg()` function in `main_run.py` to `$root_dir/vasp_potpaws`.**
