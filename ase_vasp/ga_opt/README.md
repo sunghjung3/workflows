@@ -49,3 +49,32 @@ The directories and file are set up the following way (relative to `$root_dir`):
 - `$root_dir/Mg/Mg-$i/all_candidates.traj` will be written at the end, sorted by energy.
 - All the intermediate ASE GA files will be located in `$root_dir/Mg/Mg-$i/tmp_ga`
 - All the ASE VASP files will be located in `$root_dir/Mg/Mg-$i/tmp_ga/cand$j-vasp`
+
+
+### IMPORTANT NOTE about separating a chemical element into multiple groups in VASP
+You may have a POSCAR that contains something like:
+
+       Fe   Fe   C    N    Mg
+    16    16   96    96    2
+
+The Fe is separated for a spin-polarized calculation.
+
+ASE VASP will read this and write a POSCAR with the 2 Fe groups merged together
+
+       Fe   C    N    Mg
+    32    96    96    2
+
+To prevent this, one of the Fe should be renamed to a different chemcial element in your initial skeleton POSCAR (something like Co, which has a similar atomic radius as Fe).
+
+Then, create your own POTPAW directory, and copy the Fe POTCAR into the Co directory. In this example:
+
+- `$root_dir/vasp_potpaws/potpaw_PBE/C`
+- `$root_dir/vasp_potpaws/potpaw_PBE/Co`
+    - has identical files as the Fe directory
+- `$root_dir/vasp_potpaws/potpaw_PBE/Fe`
+- `$root_dir/vasp_potpaws/potpaw_PBE/Mg`
+- `$root_dir/vasp_potpaws/potpaw_PBE/N`
+
+At the end, the structures inside `all_candidates.traj` can be manually modified to change Co back to Fe.
+
+Make sure to set `VASP_PP_PATH` inside the `jtg()` function in `main_run.py` to `$root_dir/vasp_potpaws`.
