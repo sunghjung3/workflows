@@ -48,7 +48,7 @@ class SLURMQueueRun(PBSQueueRun):
         lines = fout.readlines()
         myjobs = []
         for line in lines:
-            if line.find(self.job_prefix) != -1:
+            if line.find(self.job_prefix + '_') != -1:
                 myjobs.append(line)
         return myjobs
 
