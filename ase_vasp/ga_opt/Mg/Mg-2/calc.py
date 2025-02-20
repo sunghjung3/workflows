@@ -68,7 +68,7 @@ if __name__ == '__main__':
     # check if we can resume from a previously terminated job
     contcar_path = existing_contcar(vasp_dir)
     if contcar_path is not None:
-        a = read(contcar)
+        a = read(contcar_path)
         traj = trajectory.Trajectory(fname, 'w')
         traj.write(a)
         traj.close()
