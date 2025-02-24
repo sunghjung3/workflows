@@ -58,7 +58,7 @@ def existing_contcar(vasp_dir):
 if __name__ == '__main__':
     import sys
 
-    from ase.io import read, trajectory
+    from ase.io import read, write, trajectory
     from pymatgen.io.vasp.outputs import Vasprun
 
 
