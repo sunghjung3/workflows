@@ -75,7 +75,7 @@ comp = InteratomicDistanceComparator(n_top=n_to_optimize,
                                      dE=0.02,
                                      mic=False)
 
-pairing = CutAndSplicePairing(skeleton, n_to_optimize, blmin)
+pairing = CutAndSplicePairing(skeleton, n_to_optimize, blmin, number_of_variable_cell_vectors=3)
 mutations = OperationSelector([1., 1., 1.],
                               [MirrorMutation(blmin, n_to_optimize),
                                RattleMutation(blmin, n_to_optimize),

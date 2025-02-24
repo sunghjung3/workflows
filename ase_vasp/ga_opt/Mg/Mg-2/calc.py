@@ -63,18 +63,20 @@ if __name__ == '__main__':
 
 
     fname = sys.argv[1]
+    a = read(fname)
     vasp_dir = f'./{fname[:-5]}-vasp'
 
     # check if we can resume from a previously terminated job
     contcar_path = existing_contcar(vasp_dir)
     if contcar_path is not None:
-        a = read(contcar_path)
+        contcar = read(contcar_path)
+        a.positions = contcar.positions
+        a.cell = contcar.cell
         traj = trajectory.Trajectory(fname, 'w')
         traj.write(a)
         traj.close()
 
     print(f'Now relaxing {fname}')
-    a = read(fname)
 
     a.calc = vasp_calc(vasp_dir)
     a.info['key_value_pairs']['raw_score'] = -a.get_potential_energy()
