@@ -38,15 +38,15 @@ def jtg(job_name, traj_file):
     return s
 
 
-population_size = 100
-mutation_probability = 0.3
-n_to_test = 120
-slurm_sleep_interval = 300  # seconds
-slurm_job_prefix = "GA_" + os.path.basename(os.getcwd())
-max_n_jobs_relax = 207  # be mindful of SLURM restrictions on number of running/pending jobs
-max_n_jobs_ga = 5  # be mindful of SLURM restrictions on number of running/pending jobs
+POPULATION_SIZE = 100
+MUTATION_PROBABILITY = 0.3
+N_TO_TEST = 20
+SLURM_SLEEP_INTERVAL = 1
+SLURM_JOB_PREFIX = "GA_" + os.path.basename(os.getcwd())
+MAX_N_JOBS_RELAX = 3
+MAX_N_JOBS_GA = 2
 
-initial_db_size = 20  # should match population_size from initialize_db.py
+INITIAL_DB_SIZE = 20
 
 print(f"Hostname: {socket.gethostname()}", flush=True)
 print(f"Process ID: {os.getpid()}", flush=True)
@@ -56,9 +56,9 @@ da = DataConnection('gadb.db')
 tmp_folder = 'tmp_ga/'
 slurm_run = SLURMQueueRun(da,
                           tmp_folder=tmp_folder,
-                          job_prefix=slurm_job_prefix,
-                          n_relax=max_n_jobs_relax,
-                          n_ga=max_n_jobs_ga,
+                          job_prefix=SLURM_JOB_PREFIX,
+                          n_relax=MAX_N_JOBS_RELAX,
+                          n_ga=MAX_N_JOBS_GA,
                           job_template_generator=jtg,
                           )
 
@@ -76,10 +76,10 @@ comp = InteratomicDistanceComparator(n_top=n_to_optimize,
                                      mic=False)
 
 pairing = CutAndSplicePairing(skeleton, n_to_optimize, blmin, number_of_variable_cell_vectors=3)
-mutations = OperationSelector([1., 1., 1.],
+mutations = OperationSelector([1., 1.],
                               [MirrorMutation(blmin, n_to_optimize),
                                RattleMutation(blmin, n_to_optimize),
-                               PermutationMutation(n_to_optimize)])
+                              ])  # PermutationMutation is useless when all intercalating ions are the same
 
 # Relax all unrelaxed structures (e.g. the starting population)
 slurm_run.__cleanup__()
@@ -106,35 +106,39 @@ while True:  # outer loop for case where SLURM job gets terminated while this sc
                                  "I refuse to continue\n"
                                  "Cancel all jobs, resolve issue, and try again\n"
                                  )
-        time.sleep(slurm_sleep_interval)
+        time.sleep(SLURM_SLEEP_INTERVAL)
 
     while slurm_run.number_of_jobs_running() > 0:
         need_to_run_more = True
         print(f'Waiting for {slurm_run.number_of_jobs_running()} jobs to finish', flush=True)
-        time.sleep(slurm_sleep_interval)
+        time.sleep(SLURM_SLEEP_INTERVAL)
 
     if not need_to_run_more:
         break
 slurm_run.__cleanup__()
 
+if n_to_optimize < 2:
+    # Can't do cut and splice pairing with fewer than 2 atoms
+    sys.exit("Exiting before starting GA because n_to_optimize < 2.")
+
 # create the population
 population = Population(data_connection=da,
-                        population_size=population_size,
+                        population_size=POPULATION_SIZE,
                         comparator=comp)
 
 # Submit new candidates until enough are running
-n_tested = len(da.get_all_relaxed_candidates()) - initial_db_size
-while n_tested < n_to_test:
+n_tested = len(da.get_all_relaxed_candidates()) - INITIAL_DB_SIZE
+while n_tested < N_TO_TEST:
     while (not slurm_run.enough_jobs_running_ga() and
         len(population.get_current_population()) >= 2 and
-        n_tested < n_to_test):
+        n_tested < N_TO_TEST):
         a1, a2 = population.get_two_candidates()
         a3, desc = pairing.get_new_individual([a1, a2])
         if a3 is None:
             continue
         da.add_unrelaxed_candidate(a3, description=desc)
 
-        if random() < mutation_probability:
+        if random() < MUTATION_PROBABILITY:
             a3_mut, desc = mutations.get_new_individual([a3])
             if a3_mut is not None:
                 da.add_unrelaxed_step(a3_mut, desc)
@@ -152,11 +156,11 @@ while n_tested < n_to_test:
     print(f'{slurm_run.number_of_jobs_running()} jobs running')
     print(f'Current population: {len(population.get_current_population())}')
     sys.stdout.flush()
-    time.sleep(slurm_sleep_interval)
+    time.sleep(SLURM_SLEEP_INTERVAL)
 
 # Wait for all jobs to finish
 while slurm_run.number_of_jobs_running() > 0:
     print(f'Waiting for {slurm_run.number_of_jobs_running()} jobs to finish', flush=True)
-    time.sleep(slurm_sleep_interval)
+    time.sleep(SLURM_SLEEP_INTERVAL)
 
 write('all_candidates.traj', da.get_all_relaxed_candidates())
