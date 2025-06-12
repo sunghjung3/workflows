@@ -119,48 +119,48 @@ slurm_run.__cleanup__()
 
 if n_to_optimize < 2:
     # Can't do cut and splice pairing with fewer than 2 atoms
-    sys.exit("Exiting before starting GA because n_to_optimize < 2.")
+    print("Exiting before starting GA because n_to_optimize < 2.")
+else:
+    # create the population
+    population = Population(data_connection=da,
+                            population_size=POPULATION_SIZE,
+                            comparator=comp)
 
-# create the population
-population = Population(data_connection=da,
-                        population_size=POPULATION_SIZE,
-                        comparator=comp)
+    # Submit new candidates until enough are running
+    n_tested = len(da.get_all_relaxed_candidates()) - INITIAL_DB_SIZE
+    while n_tested < N_TO_TEST:
+        while (not slurm_run.enough_jobs_running_ga() and
+            len(population.get_current_population()) >= 2 and
+            n_tested < N_TO_TEST):
+            a1, a2 = population.get_two_candidates()
+            a3, desc = pairing.get_new_individual([a1, a2])
+            if a3 is None:
+                continue
+            da.add_unrelaxed_candidate(a3, description=desc)
 
-# Submit new candidates until enough are running
-n_tested = len(da.get_all_relaxed_candidates()) - INITIAL_DB_SIZE
-while n_tested < N_TO_TEST:
-    while (not slurm_run.enough_jobs_running_ga() and
-        len(population.get_current_population()) >= 2 and
-        n_tested < N_TO_TEST):
-        a1, a2 = population.get_two_candidates()
-        a3, desc = pairing.get_new_individual([a1, a2])
-        if a3 is None:
-            continue
-        da.add_unrelaxed_candidate(a3, description=desc)
+            if random() < MUTATION_PROBABILITY:
+                a3_mut, desc = mutations.get_new_individual([a3])
+                if a3_mut is not None:
+                    da.add_unrelaxed_step(a3_mut, desc)
+                    a3 = a3_mut
+            slurm_exit_code = slurm_run.relax(a3)
+            if slurm_exit_code:
+                raise ValueError("Failed to submit relaxation job\n"
+                                 "I refuse to continue\n"
+                                 "Cancel all jobs, resolve issue, and try again\n"
+                                 )
 
-        if random() < MUTATION_PROBABILITY:
-            a3_mut, desc = mutations.get_new_individual([a3])
-            if a3_mut is not None:
-                da.add_unrelaxed_step(a3_mut, desc)
-                a3 = a3_mut
-        slurm_exit_code = slurm_run.relax(a3)
-        if slurm_exit_code:
-            raise ValueError("Failed to submit relaxation job\n"
-                             "I refuse to continue\n"
-                             "Cancel all jobs, resolve issue, and try again\n"
-                             )
+            population.update()
+            n_tested += 1
+        print(f'{n_tested} candidates tested')
+        print(f'{slurm_run.number_of_jobs_running()} jobs running')
+        print(f'Current population: {len(population.get_current_population())}')
+        sys.stdout.flush()
+        time.sleep(SLURM_SLEEP_INTERVAL)
 
-        population.update()
-        n_tested += 1
-    print(f'{n_tested} candidates tested')
-    print(f'{slurm_run.number_of_jobs_running()} jobs running')
-    print(f'Current population: {len(population.get_current_population())}')
-    sys.stdout.flush()
-    time.sleep(SLURM_SLEEP_INTERVAL)
-
-# Wait for all jobs to finish
-while slurm_run.number_of_jobs_running() > 0:
-    print(f'Waiting for {slurm_run.number_of_jobs_running()} jobs to finish', flush=True)
-    time.sleep(SLURM_SLEEP_INTERVAL)
+    # Wait for all jobs to finish
+    while slurm_run.number_of_jobs_running() > 0:
+        print(f'Waiting for {slurm_run.number_of_jobs_running()} jobs to finish', flush=True)
+        time.sleep(SLURM_SLEEP_INTERVAL)
 
 write('all_candidates.traj', da.get_all_relaxed_candidates())
