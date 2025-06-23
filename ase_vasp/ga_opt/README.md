@@ -81,3 +81,16 @@ Then, create your own POTPAW directory (i.e. `$root_dir/vasp_potpaws`), and copy
 At the end, the structures inside `all_candidates.traj` can be manually modified to change Co back to Fe.
 
 **Make sure to set `VASP_PP_PATH` inside the `jtg()` function in `main_run.py` to `$root_dir/vasp_potpaws`.**
+
+
+### Error regarding no parent
+
+I have gotten errors during population creation saying that the spliced pairs have no parent information:
+
+```
+c1, c2 = e.data['parents']
+             ~~~~~~^^^^^^^^^^^
+KeyError: 'parents'
+```
+
+In this case, go to the `Mg-$i` directory and run `python ../clean_kids_from_db.py`, which will delete all descendents of the initial population.
