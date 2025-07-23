@@ -93,4 +93,6 @@ c1, c2 = e.data['parents']
 KeyError: 'parents'
 ```
 
-In this case, go to the `Mg-$i` directory and run `python ../clean_kids_from_db.py`, which will delete all descendents of the initial population.
+The `main_run.py` script has been updated to automatically take care of this issue.
+
+Alternatively, to delete all descendents of the initial population and start the GA from scratch, go to the `Mg-$i` directory and run `python ../clean_kids_from_db.py`.

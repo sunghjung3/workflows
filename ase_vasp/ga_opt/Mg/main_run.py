@@ -1,4 +1,5 @@
 from random import random
+from itertools import chain
 import time, os, socket, sys
 
 from ase.ga.cutandsplicepairing import CutAndSplicePairing
@@ -14,6 +15,8 @@ from ase.ga.standardmutations import (
 )
 from ase.ga.utilities import closest_distances_generator, get_all_atom_types
 from ase.io import write
+from ase.db import connect
+
 
 
 def jtg(job_name, traj_file):
@@ -122,9 +125,41 @@ if n_to_optimize < 2:
     print("Exiting before starting GA because n_to_optimize < 2.")
 else:
     # create the population
-    population = Population(data_connection=da,
-                            population_size=POPULATION_SIZE,
-                            comparator=comp)
+    population_created = False
+    while not population_created:
+        try:
+            population = Population(data_connection=da,
+                                    population_size=POPULATION_SIZE,
+                                    comparator=comp)
+            population_created = True
+        except KeyError:  # KeyError: 'parents'
+
+            db = connect("gadb.db")
+
+            # get gaid of orphans
+            orphan_gaids = []
+            for row in db.select():
+                if 'pairing' in row.key_value_pairs:
+                    if row.key_value_pairs['pairing'] == 1:
+                        if 'parents' not in row.data:
+                            orphan_gaids.append(row.key_value_pairs['gaid'])
+
+
+            # get row ids of orphans
+            orphan_row_ids = {gaid:[] for gaid in orphan_gaids}
+            for row in db.select():
+                for gaid in orphan_gaids:
+                    if 'gaid' in row.key_value_pairs and row.key_value_pairs['gaid'] == gaid:
+                        orphan_row_ids[gaid].append(row.id)
+
+            print("Orphan {gaid:[ids]}:")
+            print(orphan_row_ids)
+
+            print("Deleting rows...")
+            orphan_row_ids = list(chain.from_iterable(orphan_row_ids.values()))
+            print(orphan_row_ids)
+            db.delete(ids=orphan_row_ids)
+            print("Done")
 
     # Submit new candidates until enough are running
     n_tested = len(da.get_all_relaxed_candidates()) - INITIAL_DB_SIZE
@@ -132,11 +167,16 @@ else:
         while (not slurm_run.enough_jobs_running_ga() and
             len(population.get_current_population()) >= 2 and
             n_tested < N_TO_TEST):
+            print("Generating new candidate...", flush=True)
             a1, a2 = population.get_two_candidates()
             a3, desc = pairing.get_new_individual([a1, a2])
+            print(a3)
+            print(desc)
             if a3 is None:
+                print("Unable to generate new candidate", flush=True)
                 continue
             da.add_unrelaxed_candidate(a3, description=desc)
+            print("Generated new candidate", flush=True)
 
             if random() < MUTATION_PROBABILITY:
                 a3_mut, desc = mutations.get_new_individual([a3])
