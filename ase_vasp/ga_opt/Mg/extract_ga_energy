@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+import os
+import sys
+import glob
+import csv
+from ase.io import read
+
+# inputs
+ion = 'Mg'
+start_num = 1
+end_num = 12
+output_csv = f"{ion}_ga_energy.csv"
+
+# Reference energy for i ions: ref_full * i/n_full + ref_empty * (n_full-i)/n_full
+ref_empty = -1869.25113670
+ref_full = -1919.19009726
+n_full = 12  # number of ions when structure is "full"
+n_atoms_skeleton = 96+96+16+16
+
+
+def main():
+    # Store the original directory to return to later
+    original_dir = os.getcwd()
+    
+    # Create/open CSV file for writing
+    with open(output_csv, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile, dialect='excel')
+        # Write header
+        csv_writer.writerow([f"{ion}_count", "Raw Energy", "Ref Energy", "Form Energy (per atom)"])
+        
+        # Loop through each ion count
+        for i in range(start_num, end_num + 1):
+            dir_path = f"{ion}-{i}/tmp_ga"
+
+            # reference energy
+            ref_E = ref_full * i/n_full + ref_empty * (n_full-i)/n_full
+            
+            try:
+                # Change to the target directory
+                os.chdir(dir_path)
+                print(f"Processing directory: {dir_path}")
+                
+                # Find all candidate files
+                cand_files = glob.glob("cand*_done.traj")
+                
+                if not cand_files:
+                    print(f"No candidate files found in {dir_path}")
+                    os.chdir(original_dir)
+                    continue
+                
+                # Process each candidate file
+                for cand_file in cand_files:
+                    try:
+                        # Extract energy using ASE
+                        atoms = read(cand_file)
+                        energy = atoms.get_potential_energy()
+                        
+                        # Write to CSV
+                        form_energy = energy - ref_E
+                        form_energy /= (n_atoms_skeleton + i)
+                        csv_writer.writerow([i, energy, ref_E, form_energy])
+                        print(f"  {cand_file}: Energy = {energy}")
+                        
+                    except Exception as e:
+                        print(f"  Error processing {cand_file}: {e}")
+                
+                # Return to original directory
+                os.chdir(original_dir)
+                
+            except FileNotFoundError:
+                print(f"Directory not found: {dir_path}")
+                continue
+            except Exception as e:
+                print(f"Error processing {dir_path}: {e}")
+                # Make sure we return to the original directory even if there's an error
+                if os.getcwd() != original_dir:
+                    os.chdir(original_dir)
+    
+    print(f"Results written to {output_csv}")
+
+if __name__ == "__main__":
+    main()
