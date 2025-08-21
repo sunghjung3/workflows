@@ -4,18 +4,19 @@ import sys
 import glob
 import csv
 from ase.io import read
+from ase.ga.data import DataConnection
 
 # inputs
 ion = 'Mg'
 start_num = 1
 end_num = 12
+db_name = 'gadb.db'
 output_csv = f"{ion}_ga_energy.csv"
 
 # Reference energy for i ions: ref_full * i/n_full + ref_empty * (n_full-i)/n_full
 ref_empty = -1869.25113670
-ref_full = -1919.19009726
+ref_full = -1952.30429536
 n_full = 12  # number of ions when structure is "full"
-n_atoms_skeleton = 96+96+16+16
 
 
 def main():
@@ -26,11 +27,11 @@ def main():
     with open(output_csv, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile, dialect='excel')
         # Write header
-        csv_writer.writerow([f"{ion}_count", "Raw Energy", "Ref Energy", "Form Energy (per atom)"])
+        csv_writer.writerow([f"{ion}_count", "Raw Energy", "Ref Energy", "Form Energy"])
         
         # Loop through each ion count
         for i in range(start_num, end_num + 1):
-            dir_path = f"{ion}-{i}/tmp_ga"
+            dir_path = f"{ion}-{i}"
 
             # reference energy
             ref_E = ref_full * i/n_full + ref_empty * (n_full-i)/n_full
@@ -40,29 +41,30 @@ def main():
                 os.chdir(dir_path)
                 print(f"Processing directory: {dir_path}")
                 
+                da = DataConnection(db_name)
+
                 # Find all candidate files
-                cand_files = glob.glob("cand*_done.traj")
+                all_candidates = da.get_all_relaxed_candidates()
                 
-                if not cand_files:
+                if len(all_candidates) == 0:
                     print(f"No candidate files found in {dir_path}")
                     os.chdir(original_dir)
                     continue
                 
                 # Process each candidate file
-                for cand_file in cand_files:
+                for candidate in all_candidates:
+                    confid = candidate.info['confid']
                     try:
                         # Extract energy using ASE
-                        atoms = read(cand_file)
-                        energy = atoms.get_potential_energy()
+                        energy = candidate.get_potential_energy()
                         
                         # Write to CSV
                         form_energy = energy - ref_E
-                        form_energy /= (n_atoms_skeleton + i)
                         csv_writer.writerow([i, energy, ref_E, form_energy])
-                        print(f"  {cand_file}: Energy = {energy}")
+                        print(f"  Candidate {confid}: Energy = {energy}")
                         
                     except Exception as e:
-                        print(f"  Error processing {cand_file}: {e}")
+                        print(f"  Error processing candidiate {confid}: {e}")
                 
                 # Return to original directory
                 os.chdir(original_dir)
